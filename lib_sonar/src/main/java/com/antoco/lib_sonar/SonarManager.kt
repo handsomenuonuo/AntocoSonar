@@ -7,7 +7,8 @@ import android.os.Looper
 import android.util.Log
 import android.view.View
 import androidx.activity.ComponentActivity
-import androidx.lifecycle.DefaultLifecycleObserver
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.LifecycleOwner
 import com.antoco.lib_sonar.bean.MFloatArray
 import com.antoco.lib_sonar.bean.SonarData
@@ -51,11 +52,13 @@ object SonarManager {
 
     fun setRecordToFile(activity : Activity,path : String = ""):SonarManager{
         if(activity is ComponentActivity){
-            (activity as LifecycleOwner).lifecycle.addObserver(object : DefaultLifecycleObserver {
-                override fun onDestroy(owner: LifecycleOwner) {
-                    closeDataWriter()
-                    super.onDestroy(owner)
-                    (activity as LifecycleOwner).lifecycle.removeObserver(this)
+            (activity as LifecycleOwner).lifecycle.addObserver(object : LifecycleEventObserver {
+
+                override fun onStateChanged(source: LifecycleOwner, event: Lifecycle.Event) {
+                    if(event == Lifecycle.Event.ON_DESTROY){
+                        closeDataWriter()
+                        (activity as LifecycleOwner).lifecycle.removeObserver(this)
+                    }
                 }
             })
         }

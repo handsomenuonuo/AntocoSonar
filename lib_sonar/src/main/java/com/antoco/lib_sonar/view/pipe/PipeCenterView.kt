@@ -6,7 +6,8 @@ import android.util.AttributeSet
 import android.view.GestureDetector
 import android.view.MotionEvent
 import android.view.ScaleGestureDetector
-import androidx.lifecycle.DefaultLifecycleObserver
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.LifecycleOwner
 import kotlin.math.min
 
@@ -39,15 +40,13 @@ class PipeCenterView : GLSurfaceView, ScaleGestureDetector.OnScaleGestureListene
         setRenderer(myRender)
         renderMode = RENDERMODE_CONTINUOUSLY
 
-        (context as LifecycleOwner).lifecycle.addObserver(object : DefaultLifecycleObserver{
-            override fun onResume(owner: LifecycleOwner) {
-                super.onResume(owner)
-                pause = false
-            }
-
-            override fun onPause(owner: LifecycleOwner) {
-                super.onPause(owner)
-                pause = true
+        (context as LifecycleOwner).lifecycle.addObserver(object : LifecycleEventObserver {
+            override fun onStateChanged(source: LifecycleOwner, event: Lifecycle.Event) {
+                if(event == Lifecycle.Event.ON_DESTROY){
+                    pause = false
+                }else if(event == Lifecycle.Event.ON_PAUSE){
+                    pause = true
+                }
             }
         })
     }

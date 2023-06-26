@@ -6,7 +6,8 @@ import android.util.AttributeSet
 import android.util.SparseArray
 import androidx.core.util.forEach
 import androidx.core.util.size
-import androidx.lifecycle.DefaultLifecycleObserver
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.LifecycleOwner
 import com.antoco.lib_sonar.bean.MFloatArray
 import com.antoco.lib_sonar.bean.SonarXY
@@ -48,15 +49,13 @@ class SonarGlView : GLSurfaceView,Runnable {
         setRenderer(renderer)
         renderMode = RENDERMODE_WHEN_DIRTY
 
-        (context as LifecycleOwner).lifecycle.addObserver(object : DefaultLifecycleObserver {
-            override fun onResume(owner: LifecycleOwner) {
-                super.onResume(owner)
-                resume()
-            }
-
-            override fun onPause(owner: LifecycleOwner) {
-                super.onPause(owner)
-                pause()
+        (context as LifecycleOwner).lifecycle.addObserver(object : LifecycleEventObserver {
+            override fun onStateChanged(source: LifecycleOwner, event: Lifecycle.Event) {
+                if(event == Lifecycle.Event.ON_DESTROY){
+                    pause = false
+                }else if(event == Lifecycle.Event.ON_PAUSE){
+                    pause = true
+                }
             }
         })
     }
