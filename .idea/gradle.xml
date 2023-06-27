@@ -12,7 +12,10 @@
         <option name="modules">
           <set>
             <option value="$PROJECT_DIR$" />
+            <option value="$PROJECT_DIR$/app" />
+            <option value="$PROJECT_DIR$/lib_pickerview" />
             <option value="$PROJECT_DIR$/lib_sonar" />
+            <option value="$PROJECT_DIR$/viewbinding_base" />
           </set>
         </option>
       </GradleProjectSettings>

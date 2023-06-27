@@ -44,7 +44,7 @@ class Pipe45View : GLSurfaceView, ScaleGestureDetector.OnScaleGestureListener , 
 
         (context as LifecycleOwner).lifecycle.addObserver(object : LifecycleEventObserver{
             override fun onStateChanged(source: LifecycleOwner, event: Lifecycle.Event) {
-                if(event == Lifecycle.Event.ON_DESTROY){
+                if(event == Lifecycle.Event.ON_RESUME){
                     pause = false
                 }else if(event == Lifecycle.Event.ON_PAUSE){
                     pause = true

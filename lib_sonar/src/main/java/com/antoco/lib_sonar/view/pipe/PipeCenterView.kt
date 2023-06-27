@@ -30,7 +30,7 @@ class PipeCenterView : GLSurfaceView, ScaleGestureDetector.OnScaleGestureListene
     private val gestureDetector = GestureDetector(context,this)
     private val scaleGestureDetector = ScaleGestureDetector(context,this)
 
-    private var pause = false
+    private var pause = true
 
     var canTouch = false
 
@@ -42,7 +42,7 @@ class PipeCenterView : GLSurfaceView, ScaleGestureDetector.OnScaleGestureListene
 
         (context as LifecycleOwner).lifecycle.addObserver(object : LifecycleEventObserver {
             override fun onStateChanged(source: LifecycleOwner, event: Lifecycle.Event) {
-                if(event == Lifecycle.Event.ON_DESTROY){
+                if(event == Lifecycle.Event.ON_RESUME){
                     pause = false
                 }else if(event == Lifecycle.Event.ON_PAUSE){
                     pause = true

@@ -17,7 +17,7 @@ dependencyResolutionManagement {
     }
 }
 rootProject.name = "AntocoSonar"
-//include ':app'
-//include ':viewbinding_base'
-//include ':lib_pickerview'
+include ':app'
+include ':viewbinding_base'
+include ':lib_pickerview'
 include ':lib_sonar'
