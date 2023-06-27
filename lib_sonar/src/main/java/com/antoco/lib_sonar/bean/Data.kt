@@ -14,7 +14,7 @@ open class BaseData(){
 
 class SonarData private constructor() : BaseData() {
     var range: Int = 0//声呐量程 0~6000mm
-    var range2M: Int = 0//声呐量程 0~6000mm，转成米
+    var range2M: Float = 0f//声呐量程 0~6000mm，转成米
     var workState: WorkState = WorkState.STOP//声呐状态 工作/停止(1/0)
     var gain: Int = 0//声呐增益 声呐增益(范围 0~100，单位%)
 //    var samplingTime: Int = 0//每次采样时间

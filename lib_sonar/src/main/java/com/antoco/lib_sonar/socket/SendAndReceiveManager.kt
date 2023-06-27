@@ -118,7 +118,8 @@ internal class SendAndReceiveManager {
                                     if(it is SonarData){
                                         handleCommand(it)
                                     }else{
-                                        if(it.srcByteArray?.size == 26){//说明是发送后的应答消息
+                                        if(it.srcByteArray?.size == 28){//说明是发送后的应答消息
+                                            Log.d(tag, "收到发送回执，发送成功！")
                                             if(it.srcByteArray contentEquals  lastCommand){//如果收到的跟发送的相等，代表发送成功，取消超时检测
                                                 sendFailCount = 0
                                                 handler.removeCallbacks(sendCheckRunnable)

@@ -263,7 +263,7 @@ internal class BgRender(private val context: Context) : GLSurfaceView.Renderer {
             canvas.drawCircle(centerX,centerY,perR*(it+1),circleLinePaint)
 
             //绘制文字
-            s = "%.1f".format(SonarSpec.range *0.2f*(it+1))
+            s = "%.2f".format(SonarSpec.range *0.2f*(it+1))
             //2.用bounds计算宽度
             textPaint.getTextBounds(s, 0, s.length, rect)
             val textWidth = rect.right-rect.left

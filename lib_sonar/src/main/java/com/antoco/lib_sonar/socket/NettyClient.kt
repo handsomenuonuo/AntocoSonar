@@ -1,6 +1,7 @@
 package com.antoco.lib_sonar.socket
 
 import android.util.Log
+import com.antoco.lib_sonar.utils.toHexString
 import io.netty.bootstrap.Bootstrap
 import io.netty.buffer.ByteBuf
 import io.netty.buffer.Unpooled
@@ -202,7 +203,6 @@ internal class NettyClient {
             val b = ByteArray(msg.readableBytes())
             //复制内容到字节数组b
             msg.readBytes(b)
-//            Log.e(TAG, "messageReceived = ${b.toHexString()}" )
             SendAndReceiveManager.instance.onData(b)
         }
 

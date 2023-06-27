@@ -43,7 +43,7 @@ object SonarManager {
 
     private var isStart = false
     private var perDegree = 6
-    private var range2M = 6
+    private var range2M = 6f
     private var gain = 10
 
     private var address : String = "192.168.1.8"
@@ -223,6 +223,9 @@ object SonarManager {
         SendAndReceiveManager.instance.sendPerRotateAngle(i)
     }
 
+    /**
+     * @param i 代表毫米
+     */
     fun changeRange(i: Int) {
         SendAndReceiveManager.instance.sendRange(i)
     }

@@ -44,7 +44,7 @@ internal fun encodeSendCommand(
     sendCommand[26] = crcBs[1]
     sendCommand[27] = crcBs[0]
 
-    Log.e("test",sendCommand.toHexString())
+    Log.e("encodeSendCommand",sendCommand.toHexString())
     return sendCommand
 }
 
@@ -71,22 +71,25 @@ private fun doDecode(command : ByteArray,callback : (SonarData)-> Unit){
     val crc1 = (command[41].toInt() and 0xff shl  8) or (command[40].toInt() and 0xff)
     if(crc != crc1){
 //        println("校验crc失败")
-        Log.e("test","校验crc失败  crc = $crc  comCrc = $crc1")
+        Log.e("decodeCommand","校验crc失败  crc = $crc  comCrc = $crc1")
         return
     }
     val sonarData = SonarData.obtain()
     //解析数据
     sonarData.range = toBigUInt(command[3],command[4])
-    sonarData.range2M =  ( sonarData.range*0.001f).toInt()
+    sonarData.range2M =  ( sonarData.range*0.001f)
     sonarData.workState = if(command[5].toInt() == 0) WorkState.STOP else WorkState.START
     sonarData.gain = command[6].toInt()
 //    sonarData.samplingTime = command[7].toInt()
     sonarData.degree = toBigUInt(command[7],command[8])
     sonarData.perDegree = command[9].toInt()
     var sum = 0f
+//    Log.e("test","================")
     repeat(6){
         sonarData.measureDistance[it] = toBigUInt(command[10+it*2],command[11+it*2]) * 0.1f
-        if(sonarData.measureDistance[it] == 0f)sonarData.measureDistance[it] = 3000f + Random().nextInt(200)
+//        Log.e("test","${sonarData.measureDistance[it]}")
+        //当距离为0时，代表距离过近
+        if(sonarData.measureDistance[it] == 0f)sonarData.measureDistance[it] = 150f
         sonarData.measureDistance2M[it] =   sonarData.measureDistance[it] * 0.001f
         sum += sonarData.measureDistance[it]
     }

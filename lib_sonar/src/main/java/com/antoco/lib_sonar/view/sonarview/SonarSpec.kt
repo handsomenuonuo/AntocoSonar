@@ -11,7 +11,7 @@ package com.antoco.lib_sonar.view.sonarview
 internal object SonarSpec {
 
     //声呐的量程
-    var range  = 6
+    var range  = 6f
 
     //声呐的增益
     var gain  = 10

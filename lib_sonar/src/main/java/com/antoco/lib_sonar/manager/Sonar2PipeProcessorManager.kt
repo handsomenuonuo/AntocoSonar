@@ -1,11 +1,13 @@
 package com.antoco.lib_sonar.manager
 
+import android.util.Log
 import android.util.SparseArray
 import androidx.core.util.forEach
 import androidx.core.util.size
 import com.antoco.lib_sonar.bean.PerCircleData
 import com.antoco.lib_sonar.bean.PipeXYZ
 import com.antoco.lib_sonar.bean.MFloatArray
+import com.antoco.lib_sonar.view.sonarview.SonarSpec
 import org.joml.Vector3f
 import java.util.concurrent.LinkedBlockingQueue
 import kotlin.concurrent.thread
@@ -82,7 +84,6 @@ internal object Sonar2PipeProcessorManager  {
                 val dis6 = data.data[5]
                 val degree = data.data[6].toInt()
                 data.recycle()
-
                 //获取当前所在的区间
                 val interval = degree/60
                 //如果上一次所在的区间是-1，代表第一个数据进来，将上一个区间设为当前区间
@@ -287,8 +288,6 @@ internal object Sonar2PipeProcessorManager  {
     }
 
 
-    private const val pipeR = 3.2f
-
     /**
      * 将数据转化为XYZ
      */
@@ -296,11 +295,8 @@ internal object Sonar2PipeProcessorManager  {
         repeat(dists.size){
             var deg = degree + 60*it
             if(deg>= 360 ) deg -= 360
-            if(deg in 0 .. 2){
-                dists[it] += 0.2f
-            }
-            val x = dists[it] * cos(deg * PI_M_2_P_360)/ pipeR *5
-            val y = dists[it] * sin(deg * PI_M_2_P_360)/ pipeR *5
+            val x = dists[it] * cos(deg * PI_M_2_P_360)/ SonarSpec.range *5
+            val y = dists[it] * sin(deg * PI_M_2_P_360)/ SonarSpec.range *5
             if(l[deg]!=null){
                 l[deg].x = x
                 l[deg].y = y

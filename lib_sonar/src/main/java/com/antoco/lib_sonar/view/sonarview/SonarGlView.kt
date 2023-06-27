@@ -72,7 +72,7 @@ class SonarGlView : GLSurfaceView,Runnable {
         }
     }
 
-    fun setRange(range : Int){
+    fun setRange(range : Float){
         if(SonarSpec.range != range){
             clear()
             SonarSpec.range = range
