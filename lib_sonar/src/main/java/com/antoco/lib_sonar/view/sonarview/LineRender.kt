@@ -4,13 +4,9 @@ import android.content.Context
 import android.opengl.GLES30
 import android.opengl.GLSurfaceView
 import android.opengl.Matrix
-import android.util.Log
 import com.antoco.lib_sonar.utils.MGl30Utils
 import com.antoco.lib_sonar.utils.toFloatBuffer
-import java.nio.ByteBuffer
-import java.nio.ByteOrder
 import java.nio.FloatBuffer
-import java.nio.IntBuffer
 import javax.microedition.khronos.egl.EGLConfig
 import javax.microedition.khronos.opengles.GL10
 
@@ -22,7 +18,7 @@ import javax.microedition.khronos.opengles.GL10
  * @Version：    1.0
  * @Describe:    绘制声呐管道数据
  **********************************/
-internal class DataRender(private val context : Context) : GLSurfaceView.Renderer {
+internal class LineRender(private val context : Context) : GLSurfaceView.Renderer {
 
     private var mProgram  : Int = 0
 

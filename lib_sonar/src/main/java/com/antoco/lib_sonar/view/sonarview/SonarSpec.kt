@@ -10,9 +10,14 @@ package com.antoco.lib_sonar.view.sonarview
  **********************************/
 internal object SonarSpec {
 
+    val MAX_ZOOM = 2F
+
     //声呐的量程
-    var range  = 6f
+    var range  = 1f
 
     //声呐的增益
-    var gain  = 10
+    var gain  = 0
+
+    //雷达图的缩放
+    var zoom  = 1f
 }

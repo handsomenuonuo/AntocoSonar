@@ -19,6 +19,7 @@ import com.antoco.lib_sonar.socket.NettyConnectListener
 import com.antoco.lib_sonar.socket.OnSendAndRecvListener
 import com.antoco.lib_sonar.socket.SendAndReceiveManager
 import com.antoco.lib_sonar.utils.SonarDataWriter
+import com.antoco.lib_sonar.view.gyro.GyroView
 import com.antoco.lib_sonar.view.pipe.BasePipeView
 import com.antoco.lib_sonar.view.sonarview.SonarGlView
 import java.lang.ref.WeakReference
@@ -36,6 +37,7 @@ object SonarManager {
     private var activity : WeakReference<Activity> ?= null
     private var sonarViewMap = mutableMapOf<Int,WeakReference<SonarGlView>>()
     private var pipeViewMap = mutableMapOf<Int,WeakReference<BasePipeView>>()
+    private var gyroViewMap = mutableMapOf<Int,WeakReference<GyroView>>()
     private var recodeData = false
     private var path : String? = null
 
@@ -89,6 +91,16 @@ object SonarManager {
         return this
     }
 
+    fun attachGyroView(view : GyroView):SonarManager{
+        gyroViewMap[(view as View).id] = WeakReference(view)
+        return this
+    }
+
+    fun detachPipeView(view : GyroView):SonarManager{
+        gyroViewMap.remove((view as View).id)
+        return this
+    }
+
     fun setAddress(address:String =  "192.168.1.8",
                         port:Int = 23):SonarManager{
         this.address = address
@@ -101,6 +113,7 @@ object SonarManager {
      * SonarListener 传入不能是在方法里面直接new，因为这里接收是用的WeakReference方法。
      */
     fun connectSonar(sonarListener : SonarListener){
+//        SendAndReceiveManager.instance.test()
         listener = WeakReference(sonarListener)
         SendAndReceiveManager.instance.onSendAndRecvListener = object : OnSendAndRecvListener{
             override fun onSendStatus(isSuccess: Boolean) {
@@ -148,9 +161,12 @@ object SonarManager {
                         sv.value.get()?.setGain(gain)
                     }
                 }
+                for (sv in gyroViewMap){
+                    sv.value.get()?.rotate(sonarData.gyro_pitch,sonarData.gyro_roll,sonarData.gyro_yaw)
+                }
                 //此处数据合并，将角度数据附着到距离数据的最后面，方便处理和记录,
                 if(isStart && !sonarData.useless){
-                    time = dataCount++ * 100
+                    time = dataCount++ * 50
                     val data = MFloatArray.obtain(7)
                     sonarData.measureDistance2M.copyInto(data.data)
                     data.data[6] = sonarData.degree.toFloat()

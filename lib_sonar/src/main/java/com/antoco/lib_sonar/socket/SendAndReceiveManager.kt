@@ -62,6 +62,7 @@ internal class SendAndReceiveManager {
 
     fun start(){
         if(isStart())return
+        init()
         sendFailCount = 0
         isStart = true
         receiveQueue.clear()
@@ -92,55 +93,57 @@ internal class SendAndReceiveManager {
         }
 
         receiveThread = thread(start = true, name = "SocketRecvThread") {
-            var checkEnd  = false
+//            var checkEnd  = false
             val cacheList = mutableListOf<Byte>()
             while (isStart){
                 try {
-                    val d = receiveQueue.take()
-                    if(!checkEnd){//不需要检测结束标志位
-                        if(d.toByte() == 0xaa.toByte()){ //第一次找到0xaa
-                            checkEnd  = true //开始检测尾
-                        }else{//不需要检测尾
-                            cacheList.add(d)
-                        }
-                    }else{
-                        if(d.toByte() == 0xaa.toByte()) {//第二次找到0xaa,确定是尾
-                            if(cacheList.isNotEmpty()){//数据不为空，代表之前有数据
-                                //获取添加结束位
-                                cacheList.add(0xaa.toByte())
-                                cacheList.add(0xaa.toByte())
-                                //获取添加校验位
-                                cacheList.add(receiveQueue.take())
-                                cacheList.add(receiveQueue.take())
-                                val l = cacheList.toByteArray()
-                                cacheList.clear()
-                                decodeCommand(l){
-                                    if(it is SonarData){
-                                        handleCommand(it)
-                                    }else{
-                                        if(it.srcByteArray?.size == 28){//说明是发送后的应答消息
-                                            Log.d(tag, "收到发送回执，发送成功！")
-                                            if(it.srcByteArray contentEquals  lastCommand){//如果收到的跟发送的相等，代表发送成功，取消超时检测
-                                                sendFailCount = 0
-                                                handler.removeCallbacks(sendCheckRunnable)
-                                                onSendAndRecvListener?.onSendStatus(true)
-                                                doSend()
-                                            }
-                                        }
-                                    }
+                    val h1 = receiveQueue.take()
+                    if(h1.toInt() != 0x55)continue
+                    val h2 = receiveQueue.take()
+                    if(h2.toInt() != 0x55)continue
+                    cacheList.add(h1)
+                    cacheList.add(h2)
+                    val lenByte = receiveQueue.take()
+                    cacheList.add(lenByte)
+                    var len = lenByte.toInt()
+                    while (len != 0){
+                        cacheList.add(receiveQueue.take())
+                        len--
+                    }
+                    val t1 = receiveQueue.take()
+                    if(t1.toByte() != 0xaa.toByte()){
+                        cacheList.clear()
+                        continue
+                    }
+                    val t2 = receiveQueue.take()
+                    if(t2.toByte() != 0xaa.toByte()){
+                        cacheList.clear()
+                        continue
+                    }
+                    cacheList.add(t1)
+                    cacheList.add(t2)
+                    cacheList.add(receiveQueue.take())
+                    cacheList.add(receiveQueue.take())
+                    val l = cacheList.toByteArray()
+                    cacheList.clear()
+                    decodeCommand(l){
+                        if(it is SonarData){
+                            handleCommand(it)
+                        }else{
+                            if(it.srcByteArray?.size == 28){//说明是发送后的应答消息
+                                Log.d(tag, "收到发送回执，发送成功！")
+                                if(it.srcByteArray contentEquals  lastCommand){//如果收到的跟发送的相等，代表发送成功，取消超时检测
+                                    sendFailCount = 0
+                                    handler.removeCallbacks(sendCheckRunnable)
+                                    onSendAndRecvListener?.onSendStatus(true)
+                                    doSend()
                                 }
-                                //根据收到的数据长度来判断是不是应答
-                            }else{//数据为空
-
                             }
-                        }else{//第二次找到不是0xaa，代表是数据中间的数据，加到队列
-                            cacheList.add(0xaa.toByte())
-                            cacheList.add(d)
                         }
-                        checkEnd  = false
                     }
 
                 }catch (e :Exception){
+                    cacheList.clear()
                     e.printStackTrace()
                 }
 
@@ -224,6 +227,25 @@ internal class SendAndReceiveManager {
         sendHandler =null
 
         lastCommand = null
+    }
+
+    fun test(){
+//        55552307d0010a000006aaaaaaaaaaaaaaaaaaaaaaaa00000000000000f0004800310021013baaaa330e
+        start()
+        val data = byteArrayOf(
+            0x55,0x55,0x23,0x07,
+            0xd0.toByte(),0x01,0x0a,0x00,0x00,0x06,0xaa.toByte(),0xaa.toByte(),0xaa.toByte(),
+            0xaa.toByte(),0xaa.toByte(),0xaa.toByte(),0xaa.toByte(),0xaa.toByte(),0xaa.toByte(),0xaa.toByte(),
+            0xaa.toByte(),0xaa.toByte(),0x00,0x00,0x00,0x00,0x00,0x00,0x00,0xf0.toByte(),0x00,0x48,0x00,
+            0x31,0x00,0x21,0x01,0x3b,0xaa.toByte(),0xaa.toByte(),
+            0x33,0x0e
+        )
+        thread {
+            while (true) {
+                onData(data)
+                Thread.sleep(50)
+            }
+        }
     }
 
 

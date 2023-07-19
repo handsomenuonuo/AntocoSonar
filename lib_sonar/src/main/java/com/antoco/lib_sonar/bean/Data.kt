@@ -25,7 +25,7 @@ class SonarData private constructor() : BaseData() {
     var gyro_yaw: Float = 0f//陀螺仪航向角
     var gyro_roll: Float = 0f//陀螺仪横滚角
     var gyro_pitch: Float = 0f//陀螺仪俯仰角
-    var voltages: FloatArray = FloatArray(4)//电压 4 路电压
+    var voltages: Array<String> = Array(4){""}//电压 4 路电压
     var waterTemp: String = ""//水体温度(-40~135)
 
     var useless = false

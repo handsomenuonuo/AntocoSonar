@@ -100,7 +100,7 @@ fun toBigUInt(b1:Byte, b2: Byte):Int{
 }
 
 fun toBigInt(b1:Byte, b2: Byte):Int{
-    return (b1.toInt()  shl 8) or (b2.toInt() )
+    return (b1.toInt()  shl 8) or (b2.toInt() and 0xff )
 }
 
 fun toBigInt(b1:Byte, b2: Byte,b3:Byte, b4: Byte):Int{

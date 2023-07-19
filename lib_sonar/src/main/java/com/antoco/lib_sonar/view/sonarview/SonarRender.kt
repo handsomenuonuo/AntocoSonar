@@ -1,17 +1,19 @@
 package com.antoco.lib_sonar.view.sonarview
 
 import android.content.Context
-import android.opengl.GLES20
 import android.opengl.GLES30
 import android.opengl.GLSurfaceView
-import android.util.Log
 import javax.microedition.khronos.egl.EGLConfig
 import javax.microedition.khronos.opengles.GL10
 
-internal class SonarRender(private val context: Context) : GLSurfaceView.Renderer {
+internal class SonarRender(
+    private val context: Context,
+    private val isPointerView : Boolean = false
+) : GLSurfaceView.Renderer {
 
-    val bgRender = BgRender(context)
-    val dataRender = DataRender(context)
+    private val bgRender = BgRender(context)
+
+    private val dataRender = if(isPointerView) PointerRender(context) else LineRender(context)
 
     override fun onSurfaceCreated(gl: GL10, config: EGLConfig) {
         GLES30.glClearColor(0f,0f,0f,0f)
@@ -33,12 +35,12 @@ internal class SonarRender(private val context: Context) : GLSurfaceView.Rendere
         dataRender.onDrawFrame(gl)
     }
 
-    fun updateData(src :FloatArray){
-        dataRender.updateData(src)
-    }
-
     fun updateData(src :FloatArray,tranX : Float, tranY : Float,angle : Float){
-        dataRender.updateData(src,tranX,tranY)
+        if(isPointerView){
+            (dataRender as PointerRender).updateData(src,tranX,tranY)
+        }else{
+            (dataRender as LineRender).updateData(src,tranX,tranY)
+        }
         bgRender.angle = angle
     }
 
@@ -59,6 +61,10 @@ internal class SonarRender(private val context: Context) : GLSurfaceView.Rendere
     }
 
     fun clear(){
-        dataRender.clear()
+        if(isPointerView){
+            (dataRender as PointerRender).clear()
+        }else{
+            (dataRender as LineRender).clear()
+        }
     }
 }

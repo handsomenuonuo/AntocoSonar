@@ -12,6 +12,7 @@ import android.opengl.GLES30
 import android.opengl.GLES32
 import android.opengl.GLSurfaceView
 import android.opengl.GLUtils
+import android.util.Log
 import com.antoco.lib_sonar.utils.MGl30Utils
 import com.antoco.lib_sonar.utils.sp2px
 import com.antoco.lib_sonar.utils.toFloatBuffer
@@ -40,6 +41,7 @@ internal class BgRender(private val context: Context) : GLSurfaceView.Renderer {
     private val dashLinePaint = Paint()
     private val scanPaint = Paint()
     private val textPaint = Paint()
+    private val scaleTextPaint = Paint()
     private var perR : Float = 0f
 
     private var centerX  = 0f
@@ -64,8 +66,10 @@ internal class BgRender(private val context: Context) : GLSurfaceView.Renderer {
 
     private var gradient : SweepGradient ? =null
     private val verticesBuffer = vertices.toFloatBuffer()
-    private var fontMetrics : Paint.FontMetricsInt
+    private lateinit var fontMetrics : Paint.FontMetricsInt
+    private lateinit var scaleTextFontMetrics : Paint.FontMetricsInt
     private var textHeight = 0
+    private var scaleTextHeight = 0
     private val rect = Rect()
     //是否需要更新纹理
     private var needUpdateTexture = false
@@ -100,10 +104,12 @@ internal class BgRender(private val context: Context) : GLSurfaceView.Renderer {
 
         textPaint.isAntiAlias = true
         textPaint.color = 0x88ffffff.toInt()
-        textPaint.textSize = 16f.sp2px().toFloat()
-        fontMetrics = textPaint.fontMetricsInt
-        // 1.用FontMetrics对象计算高度
-        textHeight = fontMetrics.bottom-fontMetrics.top
+        textPaint.textSize = 0f
+
+        scaleTextPaint.isAntiAlias = true
+        scaleTextPaint.color = 0x88ffffff.toInt()
+        scaleTextPaint.textSize = 0f
+
     }
 
     fun smoothAngle(){
@@ -125,6 +131,16 @@ internal class BgRender(private val context: Context) : GLSurfaceView.Renderer {
         perR = mWidth*0.1f
         centerX = mWidth * 0.5f
         centerY = mHeight * 0.5f
+
+        textPaint.textSize = mWidth * 0.025f
+        fontMetrics = textPaint.fontMetricsInt
+        // 1.用FontMetrics对象计算高度
+        textHeight = fontMetrics.bottom-fontMetrics.top
+
+        scaleTextPaint.textSize = mWidth * 0.02f
+        scaleTextFontMetrics = scaleTextPaint.fontMetricsInt
+        // 1.用FontMetrics对象计算高度
+        scaleTextHeight = scaleTextFontMetrics.bottom-scaleTextFontMetrics.top
 
         gradient = SweepGradient(centerX,centerY,mColors, floatArrayOf(0.2f,0.3f))
         scanPaint.shader = gradient
@@ -261,13 +277,16 @@ internal class BgRender(private val context: Context) : GLSurfaceView.Renderer {
         repeat(5){
             //绘制圆环
             canvas.drawCircle(centerX,centerY,perR*(it+1),circleLinePaint)
-
             //绘制文字
-            s = "%.2f".format(SonarSpec.range *0.2f*(it+1))
+            s = if(SonarSpec.zoom >= 1){
+                "%.1f".format(SonarSpec.zoom *0.2f*(it+1))
+            }else{
+                "%.2f".format(SonarSpec.zoom *0.2f*(it+1))
+            }
             //2.用bounds计算宽度
             textPaint.getTextBounds(s, 0, s.length, rect)
             val textWidth = rect.right-rect.left
-            canvas.drawText(s,centerX+perR*(it+1)-textWidth-3,centerY - textHeight*0.5f - fontMetrics.top*0.5f,textPaint)
+            canvas.drawText(s,centerX+perR*(it+1)-textWidth-5,centerY - textHeight*0.5f - fontMetrics.top*0.5f,textPaint)
         }
         s = "增益：${SonarSpec.gain} %"
         textPaint.color = 0xcc00ff00.toInt()
@@ -275,10 +294,58 @@ internal class BgRender(private val context: Context) : GLSurfaceView.Renderer {
             10f,
             textHeight.toFloat(),
             textPaint)
+        canvas.save()
+        s = "量程：${SonarSpec.range} 米"
+        textPaint.color = 0xcc00ff00.toInt()
+        canvas.drawText(s,
+            10f,
+            textHeight.toFloat()*2,
+            textPaint)
+        canvas.save()
         //绘制虚线
         repeat(6){
             canvas.drawLine(mWidth.toFloat(),centerY,centerX,centerY,dashLinePaint)
             canvas.rotate(60f,centerX,centerY)
+        }
+        repeat(90){
+            if(it % 10 ==0){
+                if(it != 0){
+                    canvas.drawLine(mWidth.toFloat(),centerY,mWidth*0.99f,centerY,circleLinePaint)
+                    s = it.toString()
+                    //2.用bounds计算宽度
+                    scaleTextPaint.getTextBounds(s, 0, s.length, rect)
+                    val textWidth = rect.right-rect.left
+                    canvas.drawText(s,mWidth*0.99f-textWidth-5,centerY + (scaleTextFontMetrics.ascent+scaleTextFontMetrics.descent+scaleTextHeight)*0.5f  ,scaleTextPaint)
+                }
+                canvas.drawLine(0f,centerY,mWidth*0.01f,centerY,circleLinePaint)
+                s = (it+180).toString()
+                canvas.drawText(s,mWidth*0.01f+5,centerY + (scaleTextFontMetrics.ascent+scaleTextFontMetrics.descent+scaleTextHeight)*0.5f  ,scaleTextPaint)
+            }else{
+                canvas.drawLine(mWidth.toFloat(),centerY,mWidth*0.995f,centerY,circleLinePaint)
+                canvas.drawLine(0f,centerY,mWidth*0.005f,centerY,circleLinePaint)
+            }
+            canvas.rotate(-1f,centerX,centerY)
+        }
+        canvas.restore()
+        repeat(91){
+            if(it % 10 ==0){
+                if(it != 0){
+                    canvas.drawLine(mWidth.toFloat(),centerY,mWidth*0.99f,centerY,circleLinePaint)
+                    s = (360-it).toString()
+                    //2.用bounds计算宽度
+                    scaleTextPaint.getTextBounds(s, 0, s.length, rect)
+                    val textWidth = rect.right-rect.left
+                    canvas.drawText(s,mWidth*0.99f-textWidth-5,centerY + (scaleTextFontMetrics.ascent+scaleTextFontMetrics.descent+scaleTextHeight)*0.5f  ,scaleTextPaint)
+
+                    canvas.drawLine(0f,centerY,mWidth*0.01f,centerY,circleLinePaint)
+                    s = (180-it).toString()
+                    canvas.drawText(s,mWidth*0.01f+5,centerY + (scaleTextFontMetrics.ascent+scaleTextFontMetrics.descent+scaleTextHeight)*0.5f  ,scaleTextPaint)
+                }
+            }else{
+                canvas.drawLine(mWidth.toFloat(),centerY,mWidth*0.995f,centerY,circleLinePaint)
+                canvas.drawLine(0f,centerY,mWidth*0.005f,centerY,circleLinePaint)
+            }
+            canvas.rotate(1f,centerX,centerY)
         }
     }
 
@@ -368,7 +435,7 @@ internal class BgRender(private val context: Context) : GLSurfaceView.Renderer {
         needUpdateTexture = true
     }
     fun startScan() {
-        isStartScan = true
+//        isStartScan = true
     }
 
     fun stopScan(){
