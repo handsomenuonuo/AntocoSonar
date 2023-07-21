@@ -162,7 +162,7 @@ object SonarManager {
                     }
                 }
                 for (sv in gyroViewMap){
-                    sv.value.get()?.rotate(sonarData.gyro_pitch,sonarData.gyro_roll,sonarData.gyro_yaw)
+                    sv.value.get()?.rotate(-sonarData.gyro_pitch,sonarData.gyro_roll,sonarData.gyro_yaw)
                 }
                 //此处数据合并，将角度数据附着到距离数据的最后面，方便处理和记录,
                 if(isStart && !sonarData.useless){

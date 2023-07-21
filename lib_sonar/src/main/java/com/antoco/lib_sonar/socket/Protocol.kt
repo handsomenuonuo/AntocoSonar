@@ -1,6 +1,7 @@
 package com.antoco.lib_sonar.socket
 
 import android.util.Log
+import android.util.SparseArray
 import androidx.annotation.IntRange
 import com.antoco.lib_sonar.bean.BaseData
 import com.antoco.lib_sonar.bean.SonarData
@@ -9,7 +10,9 @@ import com.antoco.lib_sonar.utils.toBigByteArray2
 import com.antoco.lib_sonar.utils.toBigInt
 import com.antoco.lib_sonar.utils.toBigUInt
 import com.antoco.lib_sonar.utils.toHexString
+import java.math.MathContext
 import java.text.DecimalFormat
+import java.util.Queue
 import java.util.Random
 
 
@@ -64,13 +67,11 @@ internal fun decodeCommand(command : ByteArray,callback : (BaseData)-> Unit){
 }
 
 internal fun init(){
-    cacheDistance = floatArrayOf(-1f,-1f,-1f,-1f,-1f,-1f)
-    cacheCount = intArrayOf(judgeZeroCount,judgeZeroCount,judgeZeroCount,judgeZeroCount,judgeZeroCount,judgeZeroCount)
+    filter = Filter()
 }
 
-private const val judgeZeroCount = 0
-private var cacheDistance = floatArrayOf(-1f,-1f,-1f,-1f,-1f,-1f)
-private var cacheCount = intArrayOf(judgeZeroCount,judgeZeroCount,judgeZeroCount,judgeZeroCount,judgeZeroCount,judgeZeroCount)
+
+private var filter: Filter? = null
 
 //var testDegree = 0
 private fun doDecode(command : ByteArray,callback : (SonarData)-> Unit){
@@ -106,16 +107,13 @@ private fun doDecode(command : ByteArray,callback : (SonarData)-> Unit){
         }else{
             sonarData.measureDistance[it] = toBigUInt(command[10+it*2],command[11+it*2]) * 0.1f
         }
-        if(sonarData.measureDistance[it] == 0f){
-            if(cacheDistance[it] != 0f && cacheCount[it] != 0){
-                sonarData.measureDistance[it] = cacheDistance[it]
-                cacheCount[it] -= 1
-            }
-        }else{
-            cacheCount[it] = judgeZeroCount
-            cacheDistance[it] = sonarData.measureDistance[it]
-        }
 
+        /**********以下操作用于过滤数据和平滑处理********************************/
+        filter?.let {f->
+//            Log.e("test","滤波前  角度${sonarData.degree + it*60}   ${sonarData.measureDistance[it]}")
+            sonarData.measureDistance[it] = f.filter(sonarData.degree + it*60,sonarData.measureDistance[it])
+//            Log.e("test","滤波后  角度${sonarData.degree + it*60}   ${sonarData.measureDistance[it]}")
+        }
 
 //        Log.e("test","${sonarData.measureDistance[it]}")
 //        sonarData.measureDistance[it] = 1431f + Random().nextInt(200)
@@ -127,9 +125,9 @@ private fun doDecode(command : ByteArray,callback : (SonarData)-> Unit){
     }
 //判断数据包是否有效
 //    if(sum == 0f)sonarData.useless = true
-    sonarData.gyro_yaw =  toBigUInt(command[22],command[23]) * 0.1f
-    sonarData.gyro_roll =  toBigUInt(command[24],command[25]) * 0.1f
-    sonarData.gyro_pitch =  toBigUInt(command[26],command[27]) * 0.1f
+    sonarData.gyro_yaw =  (toBigUInt(command[22],command[23]) * 0.1f).toBigDecimal(MathContext(2)).toFloat()
+    sonarData.gyro_roll =  (toBigUInt(command[24],command[25]) * 0.1f).toBigDecimal(MathContext(2)).toFloat()
+    sonarData.gyro_pitch =  (toBigUInt(command[26],command[27]) * 0.1f).toBigDecimal(MathContext(2)).toFloat()
     repeat(4){
         sonarData.voltages[it] =  String.format("%.1f",toBigUInt(command[28+it*2],command[29+it*2]) * 0.1f)
     }

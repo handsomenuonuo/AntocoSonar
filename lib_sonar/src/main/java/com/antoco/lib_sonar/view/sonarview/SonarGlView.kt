@@ -157,7 +157,6 @@ class SonarGlView : GLSurfaceView,Runnable,ScaleGestureDetector.OnScaleGestureLi
             drawPointerList.clear()
         }else{
             drawDataArray.clear()
-            tempDataArray.clear()
         }
         renderer.clear()
     }
@@ -173,9 +172,6 @@ class SonarGlView : GLSurfaceView,Runnable,ScaleGestureDetector.OnScaleGestureLi
 
     private val PI_M_2_P_360 = (2 * PI / 360 ).toFloat()
 
-    private val tempDataArray:SparseArray<Float> by lazy(mode = LazyThreadSafetyMode.SYNCHRONIZED){
-        SparseArray<Float>()
-    }
     private val drawDataArray:SparseArray<SonarXY> by lazy(mode = LazyThreadSafetyMode.SYNCHRONIZED){
         SparseArray<SonarXY>()
     }
@@ -207,25 +203,19 @@ class SonarGlView : GLSurfaceView,Runnable,ScaleGestureDetector.OnScaleGestureLi
                     repeat(6){
                         var degree = d.data.last().toInt() + 60*it
                         if(degree>= 360 ) degree -= 360
-                        /*********以下代码用于缓存一定数据，过滤一些突变的0*******************/
-                        val dis = tempDataArray.get(degree)
-                        if(dis != null){
-                            var useDis = if(d.data[it] == 0f) dis else d.data[it]
 
-                            val x = useDis * cos(degree * PI_M_2_P_360) / SonarSpec.zoom
-                            val y = useDis * sin(degree * PI_M_2_P_360) / SonarSpec.zoom
-                            //如果没有存储这个角度的数据，就新建
-                            var sonarXY = drawDataArray.get(degree)
-                            if(sonarXY == null){
-                                sonarXY = SonarXY(x,y)
-                                drawDataArray.put(degree,sonarXY)
-                            }else{
-                                //如果这个角度的数据已经存了，就更新
-                                sonarXY.x = x
-                                sonarXY.y = y
-                            }
+                        val x = d.data[it] * cos(degree * PI_M_2_P_360) / SonarSpec.zoom
+                        val y = d.data[it] * sin(degree * PI_M_2_P_360) / SonarSpec.zoom
+                        //如果没有存储这个角度的数据，就新建
+                        var sonarXY = drawDataArray.get(degree)
+                        if(sonarXY == null){
+                            sonarXY = SonarXY(x,y)
+                            drawDataArray.put(degree,sonarXY)
+                        }else{
+                            //如果这个角度的数据已经存了，就更新
+                            sonarXY.x = x
+                            sonarXY.y = y
                         }
-                        tempDataArray.put(degree,d.data[it])
                     }
                     if(drawDataArray.size == 0){
                         continue
