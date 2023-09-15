@@ -75,7 +75,7 @@ internal class BgRender(private val context: Context) : GLSurfaceView.Renderer {
     private var needUpdateTexture = false
 
     private val mColors = intArrayOf(
-        0x55ffffff.toInt(),0x00ffffff
+        0x00ffffff.toInt(),0x55ffffff
     )
     //扫描线旋转的角度
     var angle = 0f
@@ -112,9 +112,6 @@ internal class BgRender(private val context: Context) : GLSurfaceView.Renderer {
 
     }
 
-    fun smoothAngle(){
-        angle+=1
-    }
 
     override fun onSurfaceCreated(gl: GL10?, config: EGLConfig?) {
         mProgram = MGl30Utils.createProgram(context,"BgVShader.glsl","BgFShader.glsl")
@@ -278,10 +275,10 @@ internal class BgRender(private val context: Context) : GLSurfaceView.Renderer {
             //绘制圆环
             canvas.drawCircle(centerX,centerY,perR*(it+1),circleLinePaint)
             //绘制文字
-            s = if(SonarSpec.zoom >= 1){
-                "%.1f".format(SonarSpec.zoom *0.2f*(it+1))
+            s = if(zoom >= 1){
+                "%.1f".format(zoom *0.2f*(it+1))
             }else{
-                "%.2f".format(SonarSpec.zoom *0.2f*(it+1))
+                "%.2f".format(zoom *0.2f*(it+1))
             }
             //2.用bounds计算宽度
             textPaint.getTextBounds(s, 0, s.length, rect)
@@ -431,11 +428,17 @@ internal class BgRender(private val context: Context) : GLSurfaceView.Renderer {
     }
 
     private var isStartScan = false
-    fun updateTexture() {
+    private var zoom = 1f
+    fun updateTexture(zoom:Float) {
+        this.zoom = zoom
         needUpdateTexture = true
     }
     fun startScan() {
-//        isStartScan = true
+        isStartScan = true
+    }
+
+    fun smoothAngle(){
+        angle-=1
     }
 
     fun stopScan(){

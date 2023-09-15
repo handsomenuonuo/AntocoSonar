@@ -1,6 +1,7 @@
 package com.antoco.lib_sonar.utils
 
 import android.content.Context
+import android.graphics.Color
 import android.opengl.GLES30
 import android.util.Log
 import java.io.BufferedReader
@@ -111,4 +112,19 @@ fun FloatArray.toFloatBuffer():FloatBuffer{
     buffer.put(this)
     buffer.position(0)
     return buffer
+}
+
+fun Int.toColorArray(): FloatArray {
+    val result = FloatArray(4)
+    // 提取颜色的 RGBA 分量
+    val red = Color.red(this)
+    val green = Color.green(this)
+    val blue = Color.blue(this)
+    val alpha = Color.alpha(this)
+    // 将整数值转换为浮点值
+    result[0] = red / 255f
+    result[1] = green / 255f
+    result[2] = blue / 255f
+    result[3] = alpha / 255f
+    return result
 }

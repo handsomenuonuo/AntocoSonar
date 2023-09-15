@@ -9,5 +9,7 @@ package com.antoco.lib_sonar.view.pipe
  * @Describe:
  **********************************/
 interface BasePipeView {
-    fun setData(vertex : FloatArray, indices : IntArray,normals : FloatArray?, startPos : Float? , endPos :Float?)
+    fun setData(vertex : FloatArray, indices : IntArray,
+                oVerts:MutableList<FloatArray>?, oIndices:MutableList<IntArray>? ,
+                normals : FloatArray?, startPos : Float? , endPos :Float?)
 }

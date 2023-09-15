@@ -60,46 +60,47 @@ internal class PointerRender(private val context : Context) : GLSurfaceView.Rend
             //打开使用数据的开关
             GLES30.glEnableVertexAttribArray(0)
             val size = (vBuffer!!.limit()*0.5).toInt()
-            if(size <= 60){
+            if(size <= 120){
                 GLES30.glUniform4fv(uTextColor,1, floatArrayOf(1.0f,0.5f,0.2f,1f),0)
                 GLES30.glDrawArrays(GLES30.GL_POINTS,0,size)
             }
-            else if(size<=120){
-                GLES30.glUniform4fv(uTextColor,1, floatArrayOf(1.0f,0.5f,0.2f,0.8f),0)
-                GLES30.glDrawArrays(GLES30.GL_POINTS,0,60)
-                GLES30.glUniform4fv(uTextColor,1, floatArrayOf(1.0f,0.5f,0.2f,1f),0)
-                GLES30.glDrawArrays(GLES30.GL_POINTS,60,size-60)
-            }
-            else if(size<=180){
-                GLES30.glUniform4fv(uTextColor,1, floatArrayOf(1.0f,0.5f,0.2f,0.6f),0)
-                GLES30.glDrawArrays(GLES30.GL_POINTS,0,60)
-                GLES30.glUniform4fv(uTextColor,1, floatArrayOf(1.0f,0.5f,0.2f,0.8f),0)
-                GLES30.glDrawArrays(GLES30.GL_POINTS,60,60)
-                GLES30.glUniform4fv(uTextColor,1, floatArrayOf(1.0f,0.5f,0.2f,1f),0)
-                GLES30.glDrawArrays(GLES30.GL_POINTS,120,size - 120)
-            }
             else if(size<=240){
-                GLES30.glUniform4fv(uTextColor,1, floatArrayOf(1.0f,0.5f,0.2f,0.4f),0)
-                GLES30.glDrawArrays(GLES30.GL_POINTS,0,60)
-                GLES30.glUniform4fv(uTextColor,1, floatArrayOf(1.0f,0.5f,0.2f,0.6f),0)
-                GLES30.glDrawArrays(GLES30.GL_POINTS,60,60)
                 GLES30.glUniform4fv(uTextColor,1, floatArrayOf(1.0f,0.5f,0.2f,0.8f),0)
-                GLES30.glDrawArrays(GLES30.GL_POINTS,120,60)
+                GLES30.glDrawArrays(GLES30.GL_POINTS,0,120)
                 GLES30.glUniform4fv(uTextColor,1, floatArrayOf(1.0f,0.5f,0.2f,1f),0)
-                GLES30.glDrawArrays(GLES30.GL_POINTS,180,size - 180)
+                GLES30.glDrawArrays(GLES30.GL_POINTS,120,size-120)
             }
-            else if(size<=300){
-                GLES30.glUniform4fv(uTextColor,1, floatArrayOf(1.0f,0.5f,0.2f,0.2f),0)
-                GLES30.glDrawArrays(GLES30.GL_POINTS,0,60)
-                GLES30.glUniform4fv(uTextColor,1, floatArrayOf(1.0f,0.5f,0.2f,0.4f),0)
-                GLES30.glDrawArrays(GLES30.GL_POINTS,60,60)
+            else if(size<=360){
                 GLES30.glUniform4fv(uTextColor,1, floatArrayOf(1.0f,0.5f,0.2f,0.6f),0)
-                GLES30.glDrawArrays(GLES30.GL_POINTS,120,60)
+                GLES30.glDrawArrays(GLES30.GL_POINTS,0,120)
                 GLES30.glUniform4fv(uTextColor,1, floatArrayOf(1.0f,0.5f,0.2f,0.8f),0)
-                GLES30.glDrawArrays(GLES30.GL_POINTS,180,60)
+                GLES30.glDrawArrays(GLES30.GL_POINTS,120,120)
                 GLES30.glUniform4fv(uTextColor,1, floatArrayOf(1.0f,0.5f,0.2f,1f),0)
                 GLES30.glDrawArrays(GLES30.GL_POINTS,240,size - 240)
             }
+            else if(size<=480){
+                GLES30.glUniform4fv(uTextColor,1, floatArrayOf(1.0f,0.5f,0.2f,0.4f),0)
+                GLES30.glDrawArrays(GLES30.GL_POINTS,0,120)
+                GLES30.glUniform4fv(uTextColor,1, floatArrayOf(1.0f,0.5f,0.2f,0.6f),0)
+                GLES30.glDrawArrays(GLES30.GL_POINTS,120,120)
+                GLES30.glUniform4fv(uTextColor,1, floatArrayOf(1.0f,0.5f,0.2f,0.8f),0)
+                GLES30.glDrawArrays(GLES30.GL_POINTS,240,120)
+                GLES30.glUniform4fv(uTextColor,1, floatArrayOf(1.0f,0.5f,0.2f,1f),0)
+                GLES30.glDrawArrays(GLES30.GL_POINTS,360,size - 360)
+            }
+            else if(size<=600){
+                GLES30.glUniform4fv(uTextColor,1, floatArrayOf(1.0f,0.5f,0.2f,0.2f),0)
+                GLES30.glDrawArrays(GLES30.GL_POINTS,0,120)
+                GLES30.glUniform4fv(uTextColor,1, floatArrayOf(1.0f,0.5f,0.2f,0.4f),0)
+                GLES30.glDrawArrays(GLES30.GL_POINTS,120,120)
+                GLES30.glUniform4fv(uTextColor,1, floatArrayOf(1.0f,0.5f,0.2f,0.6f),0)
+                GLES30.glDrawArrays(GLES30.GL_POINTS,240,120)
+                GLES30.glUniform4fv(uTextColor,1, floatArrayOf(1.0f,0.5f,0.2f,0.8f),0)
+                GLES30.glDrawArrays(GLES30.GL_POINTS,360,120)
+                GLES30.glUniform4fv(uTextColor,1, floatArrayOf(1.0f,0.5f,0.2f,1f),0)
+                GLES30.glDrawArrays(GLES30.GL_POINTS,480,size - 480)
+            }
+
             GLES30.glDisableVertexAttribArray(0)
         }
 

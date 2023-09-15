@@ -22,7 +22,7 @@ import javax.microedition.khronos.opengles.GL10
  * @Version：    1.0
  * @Describe:    绘制声呐管道数据
  **********************************/
-internal class LineRender(
+internal class ObstaclesLineRender(
     private val context : Context,
     private val color : Int = 0xffff7f33.toInt()
     ) : GLSurfaceView.Renderer {
@@ -31,7 +31,7 @@ internal class LineRender(
     private var uTextColor : Int = 0
 
     private  val obj = Any()
-    private var vBuffer : FloatBuffer?=null
+    private var vBuffer = mutableListOf<FloatBuffer>()
 
     private var tranX = 0f
     private var tranY = 0f
@@ -50,7 +50,7 @@ internal class LineRender(
 
     override fun onDrawFrame(gl: GL10?) {
         synchronized(obj){
-            if(vBuffer==null)return
+            if(vBuffer.isEmpty())return
             //使用着色器程序
             GLES30.glUseProgram(mProgram)
 
@@ -62,39 +62,25 @@ internal class LineRender(
             GLES30.glUniformMatrix4fv(matrixLoc, 1, false, modelM, 0)
             GLES30.glUniform4fv(uTextColor,1,colorBuf)
 
-            GLES30.glVertexAttribPointer(0,2, GLES30.GL_FLOAT,false,0,vBuffer)
-            //打开使用数据的开关
-            GLES30.glEnableVertexAttribArray(0)
-            GLES30.glDrawArrays(GLES30.GL_LINE_LOOP,0,(vBuffer!!.limit()*0.5).toInt())
+            vBuffer.forEach {
+                GLES30.glVertexAttribPointer(0,2, GLES30.GL_FLOAT,false,0,it)
+                //打开使用数据的开关
+                GLES30.glEnableVertexAttribArray(0)
+                GLES30.glDrawArrays(GLES30.GL_LINE_STRIP,0,(it.limit()*0.5).toInt())
+            }
+
             GLES30.glDisableVertexAttribArray(0)
         }
 
     }
 
-    fun updateData(src : FloatArray){
-        synchronized(obj){
-            if(vBuffer == null || vBuffer!!.limit() != src.size){
-                vBuffer = src.toFloatBuffer()
-            }else{
-                vBuffer!!.clear()
-                vBuffer!!.put(src)
-                vBuffer!!.position(0)
-            }
-        }
-    }
-
-    fun updateData(src : FloatArray,tranX : Float, tranY : Float){
+    fun updateData(src : MutableList<FloatArray>,tranX : Float, tranY : Float){
         synchronized(obj){
             this.tranX = tranX
             this.tranY = tranY
-            vBuffer?.clear()
-            if(vBuffer == null || vBuffer!!.limit() != src.size){
-                vBuffer = src.toFloatBuffer()
-            }else{
-                vBuffer?.let {
-                    it.put(src)
-                    it.position(0)
-                }
+            vBuffer.clear()
+            src.forEach {
+                vBuffer.add(it.toFloatBuffer())
             }
         }
     }
@@ -103,7 +89,7 @@ internal class LineRender(
         synchronized(obj){
             this.tranX = 0f
             this.tranY = 0f
-            vBuffer = null
+            vBuffer.clear()
         }
     }
 }

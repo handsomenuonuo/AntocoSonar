@@ -6,26 +6,28 @@ import android.opengl.GLSurfaceView
 import javax.microedition.khronos.egl.EGLConfig
 import javax.microedition.khronos.opengles.GL10
 
-internal class SonarRender(
+internal class SonarLineRender1(
     private val context: Context,
-    private val isPointerView : Boolean = false
 ) : GLSurfaceView.Renderer {
 
     private val bgRender = BgRender(context)
 
-    private val dataRender = if(isPointerView) PointerRender(context) else LineRender(context)
+    private val dataRender = LineRender(context)
+    private val dataRender1 = ObstaclesLineRender(context,0xff7a4209.toInt())
 
     override fun onSurfaceCreated(gl: GL10, config: EGLConfig) {
         GLES30.glClearColor(0f,0f,0f,0f)
         GLES30.glClear(GLES30.GL_COLOR_BUFFER_BIT )
         bgRender.onSurfaceCreated(gl,config)
         dataRender.onSurfaceCreated(gl,config)
+        dataRender1.onSurfaceCreated(gl,config)
     }
 
     override fun onSurfaceChanged(gl: GL10, width: Int, height: Int) {
         GLES30.glViewport(0,0,width,height)
         bgRender.onSurfaceChanged(gl,width,height)
         dataRender.onSurfaceChanged(gl,width,height)
+        dataRender1.onSurfaceChanged(gl,width,height)
     }
 
     override fun onDrawFrame(gl: GL10) {
@@ -33,15 +35,12 @@ internal class SonarRender(
 
         bgRender.onDrawFrame(gl)
         dataRender.onDrawFrame(gl)
+        dataRender1.onDrawFrame(gl)
     }
 
-    fun updateData(src :FloatArray,tranX : Float, tranY : Float,angle : Float){
-        if(isPointerView){
-            (dataRender as PointerRender).updateData(src,tranX,tranY)
-        }else{
-            (dataRender as LineRender).updateData(src,tranX,tranY)
-        }
-        bgRender.angle = angle
+    fun updateData(src :FloatArray,src1 :MutableList<FloatArray>,tranX : Float, tranY : Float){
+        dataRender.updateData(src,tranX,tranY)
+        dataRender1.updateData(src1,tranX,tranY)
     }
 
     fun smoothAngle(){
@@ -53,7 +52,6 @@ internal class SonarRender(
     }
 
     fun startScan() {
-        bgRender.startScan()
     }
 
     fun stopScan() {
@@ -61,10 +59,7 @@ internal class SonarRender(
     }
 
     fun clear(){
-        if(isPointerView){
-            (dataRender as PointerRender).clear()
-        }else{
-            (dataRender as LineRender).clear()
-        }
+        dataRender.clear()
+        dataRender1.clear()
     }
 }

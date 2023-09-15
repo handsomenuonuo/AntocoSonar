@@ -14,6 +14,9 @@ import com.antoco.lib_sonar.bean.MFloatArray
 import com.antoco.lib_sonar.bean.SonarData
 import com.antoco.lib_sonar.bean.WorkState
 import com.antoco.lib_sonar.manager.Sonar2PipeProcessorManager
+import com.antoco.lib_sonar.manager.Sonar2PipeProcessorManager1
+import com.antoco.lib_sonar.socket.Filter
+import com.antoco.lib_sonar.socket.Filter5
 import com.antoco.lib_sonar.socket.NettyClient
 import com.antoco.lib_sonar.socket.NettyConnectListener
 import com.antoco.lib_sonar.socket.OnSendAndRecvListener
@@ -21,7 +24,10 @@ import com.antoco.lib_sonar.socket.SendAndReceiveManager
 import com.antoco.lib_sonar.utils.SonarDataWriter
 import com.antoco.lib_sonar.view.gyro.GyroView
 import com.antoco.lib_sonar.view.pipe.BasePipeView
-import com.antoco.lib_sonar.view.sonarview.SonarGlView
+import com.antoco.lib_sonar.view.sonarview.SonarPointerGlView
+import com.antoco.lib_sonar.view.sonarview.SonarLineGlView
+import com.antoco.lib_sonar.view.sonarview.SonarLineGlView1
+import com.antoco.lib_sonar.view.sonarview.SonarSpec
 import java.lang.ref.WeakReference
 
 /**********************************
@@ -35,7 +41,8 @@ import java.lang.ref.WeakReference
 object SonarManager {
     private var listener : WeakReference<SonarListener> ?= null
     private var activity : WeakReference<Activity> ?= null
-    private var sonarViewMap = mutableMapOf<Int,WeakReference<SonarGlView>>()
+    private var lineViewMap = mutableMapOf<Int,WeakReference<SonarLineGlView1>>()
+    private var pointerViewMap = mutableMapOf<Int,WeakReference<SonarPointerGlView>>()
     private var pipeViewMap = mutableMapOf<Int,WeakReference<BasePipeView>>()
     private var gyroViewMap = mutableMapOf<Int,WeakReference<GyroView>>()
     private var recodeData = false
@@ -51,6 +58,11 @@ object SonarManager {
     private var address : String = "192.168.1.8"
     private var port = 23
     private val mainHandler : Handler = Handler(Looper.getMainLooper())
+    private var filter : Filter?=null
+
+    internal fun getActivity():Activity?{
+        return activity?.get()
+    }
 
     fun setRecordToFile(activity : Activity,path : String = ""):SonarManager{
         if(activity is ComponentActivity){
@@ -71,13 +83,23 @@ object SonarManager {
     }
 
 
-    fun attachSonarView(view : SonarGlView):SonarManager{
-        sonarViewMap[(view as View).id] = WeakReference(view)
+    fun attachSonarPointerView(view : SonarPointerGlView):SonarManager{
+        pointerViewMap[(view as View).id] = WeakReference(view)
         return this
     }
 
-    fun detachSonarView(view : SonarGlView):SonarManager{
-        sonarViewMap.remove((view as View).id)
+    fun detachSonarPointerView(view : SonarPointerGlView):SonarManager{
+        pointerViewMap.remove((view as View).id)
+        return this
+    }
+
+    fun attachSonarLineView(view : SonarLineGlView1):SonarManager{
+        lineViewMap[(view as View).id] = WeakReference(view)
+        return this
+    }
+
+    fun detachSonarLineView(view : SonarLineGlView1):SonarManager{
+        lineViewMap.remove((view as View).id)
         return this
     }
 
@@ -123,7 +145,10 @@ object SonarManager {
             override fun onSonarStart() {
                 writeStart()
                 isStart = true
-                for (sv in sonarViewMap){
+                for (sv in pointerViewMap){
+                    sv.value.get()?.start()
+                }
+                for (sv in lineViewMap){
                     sv.value.get()?.start()
                 }
                 listener?.get()?.onSonarStart()
@@ -132,7 +157,10 @@ object SonarManager {
             override fun onSonarStop() {
                 writePause()
                 isStart = false
-                for (sv in sonarViewMap){
+                for (sv in pointerViewMap){
+                    sv.value.get()?.stop()
+                }
+                for (sv in lineViewMap){
                     sv.value.get()?.stop()
                 }
                 listener?.get()?.onSonarStop()
@@ -145,19 +173,28 @@ object SonarManager {
             override fun onSonarData(sonarData: SonarData) {
                 if(perDegree != sonarData.perDegree){
                     perDegree = sonarData.perDegree
-                    for (sv in sonarViewMap){
+                    for (sv in pointerViewMap){
+                        sv.value.get()?.clear()
+                    }
+                    for (sv in lineViewMap){
                         sv.value.get()?.clear()
                     }
                 }
                 if(range2M != sonarData.range2M) {
                     range2M = sonarData.range2M
-                    for (sv in sonarViewMap){
+                    for (sv in pointerViewMap){
+                        sv.value.get()?.setRange(sonarData.range2M)
+                    }
+                    for (sv in lineViewMap){
                         sv.value.get()?.setRange(sonarData.range2M)
                     }
                 }
                 if(gain != sonarData.gain){
                     gain = sonarData.gain
-                    for (sv in sonarViewMap){
+                    for (sv in pointerViewMap){
+                        sv.value.get()?.setGain(gain)
+                    }
+                    for (sv in lineViewMap){
                         sv.value.get()?.setGain(gain)
                     }
                 }
@@ -166,16 +203,48 @@ object SonarManager {
                 }
                 //此处数据合并，将角度数据附着到距离数据的最后面，方便处理和记录,
                 if(isStart && !sonarData.useless){
+                    sonarData.measureDistance.forEachIndexed { index, fl ->
+                        var d = sonarData.degree - index*60
+                        if(d < 0)d += 360
+                        filter?.let {
+                            var b = it.filter(d,fl,object : Filter.FilterListener{
+                                override fun onFilterData(filterData: Float, originData: Float) {
+
+                                }
+
+                                override fun onFilterArray(
+                                    filterData: FloatArray,
+                                    originData: FloatArray
+                                ) {
+                                    for (sv in lineViewMap){
+                                        sv.value.get()?.let {view->
+                                            view.updateData(filterData,originData)
+                                        }
+                                    }
+                                    Sonar2PipeProcessorManager1.analysisData(filterData.clone(),originData.clone())
+                                }
+
+                            })
+                        }
+                    }
+
                     time = dataCount++ * 50
                     val data = MFloatArray.obtain(7)
                     sonarData.measureDistance2M.copyInto(data.data)
                     data.data[6] = sonarData.degree.toFloat()
                     data.time = time
-                    for (sv in sonarViewMap){
-                        sv.value.get()?.updateData(data.clone())
+                    for (sv in pointerViewMap){
+                        sv.value.get()?.let {
+                            it.updateData(data.clone())
+                        }
                     }
+//                    if(sonarData.hasFilter){
+//
+//                    }
                     writeSonarData(data.clone())
-                    Sonar2PipeProcessorManager.analysisData(data.clone())
+//                    if(sonarData.hasFilter){
+//                        Sonar2PipeProcessorManager.analysisData(sonarData.clone())
+//                    }
                     data.recycle()
                     listener?.get()?.onSonarTime(time)
                 }
@@ -189,6 +258,7 @@ object SonarManager {
         NettyClient.instance.connect(object : NettyConnectListener {
             override fun onConnected() {
                 Log.i("SonarManager","SOCKET连接成功")
+                filter = Filter()
                 SendAndReceiveManager.instance.start()
                 openDataWriter()
                 listener?.get()?.onConnected()
@@ -214,21 +284,31 @@ object SonarManager {
             }
         })
 
-        Sonar2PipeProcessorManager.setOnDataListener { verts, indices, normals, s, e ->
+        Sonar2PipeProcessorManager1.setOnDataListener { verts, indices, oVerts, oIndices,normals, s, e ->
             for(wV in pipeViewMap){
-                wV.value.get()?.setData(verts,indices,normals,s,e)
+                wV.value.get()?.setData(verts,indices,oVerts, oIndices,normals,s,e)
             }
-            listener?.get()?.onPipeData(verts,indices,normals,s,e)
+            listener?.get()?.onPipeData(verts,indices,oVerts, oIndices,normals,s,e)
         }
     }
 
+
+
     fun disconnect() {
-        Sonar2PipeProcessorManager.setOnDataListener(null)
+        Sonar2PipeProcessorManager1.setOnDataListener(null)
         NettyClient.instance.disconnect()
     }
 
     fun openSonarDevice(){
-        SendAndReceiveManager.instance.sendStartState(WorkState.START)
+        SendAndReceiveManager.instance.sendStartState(WorkState.ROTATION)
+    }
+
+    fun changeWorkMode(){
+        if(SonarSpec.workState == WorkState.ROTATION){
+            SendAndReceiveManager.instance.sendStartState(WorkState.STATIC)
+        }else if(SonarSpec.workState == WorkState.STATIC){
+            SendAndReceiveManager.instance.sendStartState(WorkState.ROTATION)
+        }
     }
 
     fun closeSonarDevice(){
@@ -248,6 +328,10 @@ object SonarManager {
 
     fun changeGain(i: Int) {
         SendAndReceiveManager.instance.sendGain(i)
+    }
+
+    fun changeDownUp(down: Int,up:Int) {
+        SendAndReceiveManager.instance.sendDownUp(down,up)
     }
 
     private fun writeStart() {
@@ -283,18 +367,24 @@ object SonarManager {
 
 interface SonarListener : NettyConnectListener, OnSendAndRecvListener {
     fun onSonarTime(time : Long)
-    fun onPipeData(verts:FloatArray, indices:IntArray ,normals:FloatArray,startPos:Float,endPos:Float)
+    fun onPipeData(verts:FloatArray, indices:IntArray ,oVerts:MutableList<FloatArray>, oIndices:MutableList<IntArray> ,normals:FloatArray?,startPos:Float,endPos:Float)
 }
+
+
 
 abstract class SimpleSonarListener : SonarListener{
 
     override fun onPipeData(
         verts: FloatArray,
         indices: IntArray,
-        normals: FloatArray,
+        oVerts:MutableList<FloatArray>,
+        oIndices:MutableList<IntArray> ,
+        normals: FloatArray?,
         startPos: Float,
         endPos: Float
     ) {
+
+
     }
 
     override fun onSonarTime(time: Long) {

@@ -8,7 +8,7 @@ package com.antoco.lib_sonar.bean
  * @Version：    1.0
  * @Describe:
  **********************************/
-class MFloatArray(private val size : Int) {
+class MFloatArray(val size : Int) {
     var time = 0L
     var data : FloatArray = FloatArray(size)
     private var next: MFloatArray? = null

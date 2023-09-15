@@ -138,12 +138,14 @@ class PipeCenterView : GLSurfaceView, ScaleGestureDetector.OnScaleGestureListene
     override fun setData(
         vertex: FloatArray,
         indices: IntArray,
+        oVerts:MutableList<FloatArray>?,
+        oIndices:MutableList<IntArray>? ,
         normals: FloatArray?,
         startPos: Float?,
         endPos: Float?
     ) {
         if(pause)return
-        myRender.setData(vertex,indices,startPos!!,endPos!!)
+        myRender.setData(vertex,indices,oVerts,oIndices,startPos!!,endPos!!)
     }
 
 }

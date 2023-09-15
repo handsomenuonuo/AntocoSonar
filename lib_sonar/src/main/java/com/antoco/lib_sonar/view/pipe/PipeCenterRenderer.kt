@@ -18,6 +18,7 @@ import android.util.Log
 import com.antoco.lib_sonar.R
 import com.antoco.lib_sonar.utils.MGl30Utils
 import com.antoco.lib_sonar.utils.sp2px
+import com.antoco.lib_sonar.utils.toColorArray
 import com.antoco.lib_sonar.utils.toFloatBuffer
 import com.antoco.lib_sonar.utils.toIntBuffer
 import com.antoco.lib_sonar.view.sonarview.SonarSpec
@@ -39,6 +40,7 @@ import kotlin.math.sqrt
 internal class PipeCenterRenderer(val context: Context): Renderer {
 
     private var mProgram = 0
+    private var uTextColor = 0
     private var textureHandle : Int = 0
     private var useTextureHandle : Int = 0
     //投影矩阵
@@ -54,6 +56,9 @@ internal class PipeCenterRenderer(val context: Context): Renderer {
 
     private var vertexBuffer : FloatBuffer? = null
     private var indicesBuffer : IntBuffer? = null
+
+    private var oVertexBuffer : MutableList<FloatBuffer> = mutableListOf()
+    private var oIndicesBuffer : MutableList<IntBuffer> = mutableListOf()
 
     private val obj = Any()
     private var length = 0f //当前绘制的管道的总长度
@@ -123,6 +128,8 @@ internal class PipeCenterRenderer(val context: Context): Renderer {
         0.07f,0f,0.98f,
     )
 
+    private val obColor = 0xff7a4209.toInt().toColorArray().toFloatBuffer()
+    private val zhouColor = 0xed00ff00.toInt().toColorArray().toFloatBuffer()
     private var angleCoordVer: FloatArray ? = null
 
     private var startPos = 0f
@@ -172,11 +179,12 @@ internal class PipeCenterRenderer(val context: Context): Renderer {
 
     override fun onSurfaceCreated(gl: GL10?, config: EGLConfig?) {
         GLES30.glClearColor(0.12f,0.156f,0.27f,0f)
-        mProgram = MGl30Utils.createProgram(context,"PipeVShader.glsl","PipeFShader.glsl")
+        mProgram = MGl30Utils.createProgram(context,"PipeVShader.glsl","PipeObFShader.glsl")
 
         GLES30.glUseProgram(mProgram)
         textureHandle = GLES30.glGetUniformLocation(mProgram, "Texture")
         useTextureHandle = GLES30.glGetUniformLocation(mProgram, "useTexture")
+        uTextColor = GLES30.glGetUniformLocation(mProgram, "uTextColor")
 //        initTextTexture()
 
         initVAO_VBO_EBO()
@@ -266,26 +274,45 @@ private fun initVAO_VBO_EBO(){
 }
 
 
-    private var localEyeLoc = 6f
+    private var locAngleX = 0f
+    private var locAngleY = 0f
+    private var angleX = locAngleX
+    private var angleY = locAngleY
+    fun rotate(x :Float,y : Float){
+        synchronized(obj){
+            locAngleX -= x
+            angleX = locAngleX
+            locAngleY -= y
+            angleY = locAngleY
+        }
+    }
+
+    private var localEyeLoc = 0f
     private var eyeLoc = localEyeLoc
+    private var lastScale :Float = 1f
     fun scale(scale :Float){
-        val d = localEyeLoc / scale
-        eyeLoc = if(d < 2) 2f else d
+        synchronized(obj) {
+            if(kotlin.math.abs(scale - lastScale) >0.01f){
+                if (scale > 1) {
+                    eyeLoc += if(eyeLoc > 0f){
+                        0.1f
+                    }else{
+                        0.5f
+                    }
+                    if(eyeLoc > 50f+length){
+                        eyeLoc = 50f+length
+                    }
+                } else if (scale < 1) {
+                    eyeLoc -=0.5f
+                }
+                lastScale = scale
+            }
+
+        }
     }
 
     fun scaleEnd() {
         localEyeLoc = eyeLoc
-    }
-
-    private var locAngleX = 0f
-    private var locAngleY = 90f
-    private var angleX = locAngleX
-    private var angleY = locAngleY
-    fun rotate(x :Float,y : Float){
-        locAngleX -= x
-        angleX = locAngleX
-        locAngleY -= y
-        angleY = locAngleY
     }
 
     private fun loadTexture(){
@@ -432,12 +459,14 @@ private fun initVAO_VBO_EBO(){
                 val matrixLoc = GLES30.glGetUniformLocation(mProgram, "u_Matrix")
                 Matrix.setIdentityM(modelM, 0) // 初始化模型矩阵
 
-                Matrix.translateM(modelM, 0, 0f, 0f, length/2f)
+                Matrix.translateM(modelM, 0, 0f, 0f, eyeLoc)
+                Matrix.translateM(modelM, 0, 0f, 0f, +length/2f)
                 Matrix.rotateM(modelM, 0, angleX,0f, 1f, 0f) // 旋转模型矩阵
                 Matrix.rotateM(modelM, 0, angleY,1f, 0f, 0f) // 旋转模型矩阵
                 Matrix.translateM(modelM, 0, 0f, 0f, -length/2f)  // 将矩阵平移回原始位置
+
                 //设置相机位置
-                Matrix.setLookAtM(viewM, 0, 0f, 0f, eyeLoc, 0f, 0f, 0f, 0f, 1f, 0f);
+                Matrix.setLookAtM(viewM, 0, 0f, 0f, 15f, 0f, 0f, 0f, 0f, 1f, 0f);
                 // 把投影矩阵和模型矩阵相乘，得到最终的变换矩阵
                 Matrix.multiplyMM(resultM, 0, projectionM, 0, viewM, 0)
                 //计算变换矩阵
@@ -459,12 +488,28 @@ private fun initVAO_VBO_EBO(){
                 GLES20.glEnableVertexAttribArray(1)
                 GLES20.glDrawElements(GLES20.GL_TRIANGLES, indicesBuffer!!.limit(), GLES20.GL_UNSIGNED_INT, indicesBuffer)
 
+                oVertexBuffer.forEachIndexed { index, floatBuffer ->
+                    GLES20.glBindTexture(GLES30.GL_TEXTURE_2D,textures[0])
+                    //修改着色器里的值
+                    GLES30.glUniform1i(textureHandle, 0)
+                    GLES30.glUniform1i(useTextureHandle, 0)
+                    GLES30.glUniform4fv(uTextColor,1,obColor)
+                    floatBuffer.position(0)
+                    GLES20.glVertexAttribPointer(0, 3, GLES20.GL_FLOAT, false, 20, floatBuffer)
+                    GLES20.glEnableVertexAttribArray(0)
+                    floatBuffer.position(3)
+                    GLES20.glVertexAttribPointer(1, 2, GLES20.GL_FLOAT, false, 20, floatBuffer)
+                    GLES20.glEnableVertexAttribArray(1)
+                    GLES20.glDrawElements(GLES20.GL_TRIANGLES, oIndicesBuffer[index].limit(), GLES20.GL_UNSIGNED_INT, oIndicesBuffer[index])
+                }
+
                 //绑定vao
                 GLES30.glBindVertexArray(vao[0])
                 //绑定vbo
                 GLES30.glBindBuffer(GLES30.GL_ARRAY_BUFFER,vbo[0])
                 GLES20.glLineWidth(2f)
                 GLES30.glUniform1i(useTextureHandle, 0)
+                GLES30.glUniform4fv(uTextColor,1,zhouColor)
                 GLES20.glDrawArrays(GLES20.GL_LINES, 0, 2)
                 GLES20.glDrawArrays(GLES20.GL_TRIANGLES, 2, 3)
                 GLES20.glDrawArrays(GLES20.GL_LINES, 5, 2)
@@ -529,13 +574,18 @@ private fun initVAO_VBO_EBO(){
         }
     }
 
-    fun setData(vertex: FloatArray, indices: IntArray , startPos : Float , endPos :Float){
+    fun setData(vertex: FloatArray, indices: IntArray ,
+                oVerts:MutableList<FloatArray>?,
+                oIndices:MutableList<IntArray>? ,
+                startPos : Float , endPos :Float){
         this.startPos = startPos
         this.endPos = endPos
-        setData(vertex,indices)
+        setData(vertex,indices,oVerts,oIndices)
     }
 
-    fun setData(vertex: FloatArray, indices: IntArray) {
+    fun setData(vertex: FloatArray, indices: IntArray,
+                oVerts:MutableList<FloatArray>?,
+                oIndices:MutableList<IntArray>? ,) {
         synchronized(obj){
             length = vertex[vertex.size-3]
             vertexBuffer?.clear()
@@ -573,6 +623,14 @@ private fun initVAO_VBO_EBO(){
 //                    it.position(0)
 //                }
 //            }
+            oVertexBuffer.clear()
+            oIndicesBuffer.clear()
+            oVerts?.forEach {
+                oVertexBuffer.add(it.toFloatBuffer())
+            }
+            oIndices?.forEach {
+                oIndicesBuffer.add(it.toIntBuffer())
+            }
 
         }
 

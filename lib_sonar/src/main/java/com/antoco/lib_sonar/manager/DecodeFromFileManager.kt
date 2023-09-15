@@ -195,7 +195,7 @@ class DecodeFromFileManager {
             val x = dists[it] * cos(deg * PI_M_2_P_360) *4
             val y = dists[it] * sin(deg * PI_M_2_P_360) *4
 
-            l.put(deg, PipeXYZ(x,y,z))
+            l.put(deg, PipeXYZ(deg,x,y,z))
             poiSize ++
         }
     }

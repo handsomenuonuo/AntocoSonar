@@ -1,5 +1,7 @@
 package com.antoco.lib_sonar.view.sonarview
 
+import com.antoco.lib_sonar.bean.WorkState
+
 /**********************************
  * @Name:         SonarSpec
  * @Copyright：  Antoco
@@ -10,7 +12,7 @@ package com.antoco.lib_sonar.view.sonarview
  **********************************/
 internal object SonarSpec {
 
-    val MAX_ZOOM = 2F
+
 
     //声呐的量程
     var range  = 1f
@@ -18,6 +20,7 @@ internal object SonarSpec {
     //声呐的增益
     var gain  = 0
 
-    //雷达图的缩放
-    var zoom  = 1f
+
+
+    var workState = WorkState.STOP
 }

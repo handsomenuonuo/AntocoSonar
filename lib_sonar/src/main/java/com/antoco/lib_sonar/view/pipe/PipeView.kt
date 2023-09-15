@@ -130,6 +130,7 @@ class PipeView : GLSurfaceView, ScaleGestureDetector.OnScaleGestureListener , Ge
     override fun setData(
         vertex: FloatArray,
         indices: IntArray,
+        oVerts:MutableList<FloatArray>?, oIndices:MutableList<IntArray>? ,
         normals: FloatArray?,
         startPos: Float?,
         endPos: Float?

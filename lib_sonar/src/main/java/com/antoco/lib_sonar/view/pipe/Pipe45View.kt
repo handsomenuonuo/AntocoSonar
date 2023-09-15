@@ -162,6 +162,8 @@ class Pipe45View : GLSurfaceView, ScaleGestureDetector.OnScaleGestureListener , 
     override fun setData(
         vertex: FloatArray,
         indices: IntArray,
+        oVerts:MutableList<FloatArray>?,
+        oIndices:MutableList<IntArray>? ,
         normals: FloatArray?,
         startPos: Float?,
         endPos: Float?

@@ -28,7 +28,7 @@ import kotlin.math.sin
  * @Version：    1.0
  * @Describe:
  **********************************/
-internal object Sonar2PipeProcessorManager  {
+internal object Sonar2PipeProcessorManager1  {
 
     //todo 目前先固定每次旋转的角度是6度，因为是6个声呐，那么一圈的数据其实就是一个声呐旋转60度，就是60个点,一个神呐对应的点就是10
     private const val PER_CIRCLE_DATA_COUNT = 120
@@ -51,7 +51,7 @@ internal object Sonar2PipeProcessorManager  {
     //存储解析文件每一圈的数据
     private val list = mutableListOf<PerCircleData>()
 
-    private val dataQueue = LinkedBlockingQueue<SonarData>()
+    private val dataQueue = LinkedBlockingQueue<FloatArray>()
 
     private var decodeThread : Thread?=null
 
@@ -74,79 +74,61 @@ internal object Sonar2PipeProcessorManager  {
     private var startDistance = 0f
     private var endDistance = 0f
 
-    private val tempCircleData :SparseArray<Float> = SparseArray()
-    private val tempFoCircleData :SparseArray<Float> = SparseArray()
+//    private val tempCircleData :SparseArray<Float> = SparseArray()
+//    private val tempFoCircleData :SparseArray<Float> = SparseArray()
 
     init {
         decodeThread = thread{
             while (true){
-                val sonarData = dataQueue.take()
-                val data = sonarData.fMeasureDistance2M
-                val foData = sonarData.foMeasureDistance2M
-                val degree = sonarData.degree
-                data.forEachIndexed { index, fl ->
-                    var deg = degree - 60*index
-                    if(deg < 0)deg+=360
-                    tempCircleData.put(deg,fl)
-                    tempFoCircleData.put(deg,foData[index])
-                }
-                if(tempCircleData.size == PER_CIRCLE_DATA_COUNT){
-                    addOneCircle()
-                    tempCircleData.clear()
-                    tempFoCircleData.clear()
-                }
+                val filterData = dataQueue.take()
+                val originData = dataQueue.take()
 
-                sonarData.recycle()
-            }
-        }
-    }
-    /**
-     * 添加一圈数据
-     */
-    private fun addOneCircle(){
-        if(index % CIRCLE_SIMPLING_RATE == 0){
-            val perCircleData = PerCircleData.obtain()
-            perCircleData.z = 0.5f
-            if(list.size > MAX_CIRCLE_LIST_COUNT){
-                val d = list.removeLast()
-                d.recycle()
-                startDistance += d.z
-            }
-            //将臂长转化为xyz
-            val oDegreeList = mutableListOf<Int>()
-            tempCircleData.forEach { key, value ->
-                formatXYZ(key,value,perCircleData.z,perCircleData.xyz)
-                formatXYZ(key,tempFoCircleData[key],perCircleData.z,perCircleData.oXyz)
-            }
-            tempCircleData.forEach { key, value ->
-                if(tempFoCircleData[key] != value && key != tempFoCircleData.keyAt(tempFoCircleData.size-1)){
-                    //故障点
-                    oDegreeList.add(key)
-                }else{
-                    if(oDegreeList.size > 2){
-                        var deg = oDegreeList.last()+3
-                        if(deg >= 360)deg-=360
-                        oDegreeList.add(deg)
-                        deg = oDegreeList.first()-3
-                        if(deg < 0)deg+=360
-                        oDegreeList.add(0,deg)
-                        val oTempList = mutableListOf<PipeXYZ>()
-                        oDegreeList.forEach{dd->
-                            oTempList.add(perCircleData.oXyz[dd])
-                        }
-                        perCircleData.obstacleXyz.add(oTempList)
+                if(index % CIRCLE_SIMPLING_RATE == 0){
+                    val perCircleData = PerCircleData.obtain()
+                    perCircleData.z = 0.5f
+                    if(list.size > MAX_CIRCLE_LIST_COUNT){
+                        val d = list.removeLast()
+                        d.recycle()
+                        startDistance += d.z
                     }
-                    oDegreeList.clear()
-                }
-            }
+                    //将臂长转化为xyz
+                    val oDegreeList = mutableListOf<Int>()
+                    filterData.forEachIndexed { key, value ->
+                        formatXYZ(key*3,value*0.001f,perCircleData.z,perCircleData.xyz)
+                        formatXYZ(key*3,originData[key]*0.001f,perCircleData.z,perCircleData.oXyz)
+                    }
+                    filterData.forEachIndexed { key, value ->
+                        if(originData[key] != value && key != (originData.size-1)){
+                            //故障点
+                            oDegreeList.add(key*3)
+                        }else{
+                            if(oDegreeList.size > 2){
+                                var deg = oDegreeList.last()+3
+                                if(deg >= 360)deg-=360
+                                oDegreeList.add(deg)
+                                deg = oDegreeList.first()-3
+                                if(deg < 0)deg+=360
+                                oDegreeList.add(0,deg)
+                                val oTempList = mutableListOf<PipeXYZ>()
+                                oDegreeList.forEach{dd->
+                                    oTempList.add(perCircleData.oXyz[dd])
+                                }
+                                perCircleData.obstacleXyz.add(oTempList)
+                            }
+                            oDegreeList.clear()
+                        }
+                    }
 
-            //计算偏移量
-            transXYZ(perCircleData.xyz)
-            list.add(0,perCircleData)
-            formatData()
+                    //计算偏移量
+                    transXYZ(perCircleData.xyz)
+                    list.add(0,perCircleData)
+                    formatData()
+                }
+                index++
+            }
         }
-        index++
     }
+
 
     /**
      * 遍历处理每一圈的数据
@@ -204,6 +186,7 @@ internal object Sonar2PipeProcessorManager  {
                             oIndex++
                             verIndex++
                         }
+
                         verIndex = 0
                         //前一圈的数据
                         obstacleXyzList.forEach { value ->
@@ -414,8 +397,10 @@ internal object Sonar2PipeProcessorManager  {
     }
 
 
-    fun analysisData(data: SonarData){
-        dataQueue.put(data)
+    fun analysisData(filterData: FloatArray,
+                     originData: FloatArray){
+        dataQueue.put(filterData)
+        dataQueue.put(originData)
     }
 
 
@@ -423,7 +408,7 @@ internal object Sonar2PipeProcessorManager  {
         index = 0
         list.clear()
         dataQueue.clear()
-        tempCircleData.clear()
+//        tempCircleData.clear()
 //        vertexMap.clear()
     }
 

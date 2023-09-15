@@ -8,6 +8,7 @@ import androidx.annotation.IntRange
 import com.antoco.lib_sonar.bean.SonarData
 import com.antoco.lib_sonar.bean.WorkState
 import com.antoco.lib_sonar.utils.toHexString
+import com.antoco.lib_sonar.view.sonarview.SonarSpec
 import java.lang.Exception
 import java.util.concurrent.LinkedBlockingQueue
 import kotlin.concurrent.thread
@@ -189,12 +190,14 @@ internal class SendAndReceiveManager {
      */
     private fun handleCommand(sonarData : SonarData){
         if(workState != sonarData.workState){//当前的工作状态跟收到的不一样
-            if(sonarData.workState == WorkState.START){
+            if(workState == WorkState.STOP){
                 onSendAndRecvListener?.onSonarStart()
-            }else{
+                init()
+            }else if(sonarData.workState == WorkState.STOP){
                 onSendAndRecvListener?.onSonarStop()
             }
             workState = sonarData.workState
+            SonarSpec.workState = workState
         }
         gain = sonarData.gain
         range = sonarData.range
@@ -251,6 +254,7 @@ internal class SendAndReceiveManager {
 
     //塞入socket发过来的消息
     fun onData(data : ByteArray){
+        Log.e("test","${data.toHexString()}")
         for(d in data) receiveQueue.add(d)
     }
 
@@ -275,14 +279,18 @@ internal class SendAndReceiveManager {
         sendConfigSet(workState,range,gain,perRotateAngle)
     }
 
+    fun sendDownUp(down:Int,up:Int){
+        sendConfigSet(workState,range, gain,perRotateAngle,down,up)
+    }
+
     /**
      * 发送
      */
-    private fun sendConfigSet(workState: WorkState,range:Int,gain: Int,perRotateAngle:Int){
+    private fun sendConfigSet(workState: WorkState,range:Int,gain: Int,perRotateAngle:Int,downRange:Int=3000,upRange:Int=3320){
         Log.e(tag,"sendConfigSet")
         if(!isStart())return
         val f = {
-            encodeSendCommand(workState,gain,range,perRotateAngle)
+            encodeSendCommand(workState,gain,range,perRotateAngle,downRange,upRange)
         }
         sendQueue.add(f)
     }

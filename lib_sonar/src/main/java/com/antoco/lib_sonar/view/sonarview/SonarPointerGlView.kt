@@ -2,22 +2,18 @@ package com.antoco.lib_sonar.view.sonarview
 
 import android.content.Context
 import android.opengl.GLSurfaceView
-import android.os.Build
 import android.util.AttributeSet
-import android.util.Log
 import android.util.SparseArray
 import android.view.MotionEvent
 import android.view.ScaleGestureDetector
-import android.view.Surface
-import android.view.SurfaceHolder
 import androidx.core.util.forEach
 import androidx.core.util.size
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.LifecycleOwner
+import com.antoco.lib_sonar.R
 import com.antoco.lib_sonar.bean.MFloatArray
 import com.antoco.lib_sonar.bean.SonarXY
-import java.lang.Exception
 import java.math.MathContext
 import java.util.concurrent.LinkedBlockingQueue
 import kotlin.math.PI
@@ -25,35 +21,26 @@ import kotlin.math.cos
 import kotlin.math.min
 import kotlin.math.sin
 
-class SonarGlView : GLSurfaceView,Runnable,ScaleGestureDetector.OnScaleGestureListener {
+
+class SonarPointerGlView : GLSurfaceView,Runnable,ScaleGestureDetector.OnScaleGestureListener {
     private val mContext : Context
 
     private var mWidth = 0
     private var mHeight = 0
 
+    var isPointerView = false
+    private var renderer : SonarRender
+
     constructor(context:Context):this(context,null)
     constructor(context: Context,attrs : AttributeSet?):super(context,attrs){
         this.mContext = context
-    }
+        if(attrs != null){
+            val attributes = context.obtainStyledAttributes(attrs, R.styleable.SonarGlView)
+            isPointerView = attributes.getBoolean(R.styleable.SonarGlView_isPointerView,false)
+            attributes.recycle()
+        }
+        renderer  = SonarRender(context,isPointerView)
 
-    private var thread : Thread?=null
-
-    @Volatile
-    private var isStart = false
-
-    private var pause = true
-
-    private val dataQueue = LinkedBlockingQueue<MFloatArray>()
-
-    private var useOffsetXY = false
-
-    private var isPointerView = false
-
-    private val renderer : SonarRender = SonarRender(context,isPointerView)
-
-    private val scaleGestureDetector = ScaleGestureDetector(context,this)
-
-    init {
         setEGLContextClientVersion(3)
         setEGLConfigChooser(8,8,8,8,16,0)
 //        holder.setFormat(PixelFormat.TRANSLUCENT)
@@ -71,6 +58,24 @@ class SonarGlView : GLSurfaceView,Runnable,ScaleGestureDetector.OnScaleGestureLi
         })
     }
 
+    //雷达图的缩放
+    private var zoom  = 1f
+    private val MAX_ZOOM = 2f
+
+    private var thread : Thread?=null
+
+    @Volatile
+    private var isStart = false
+
+    private var pause = true
+
+    private val dataQueue = LinkedBlockingQueue<MFloatArray>()
+
+    private var useOffsetXY = false
+
+    private val scaleGestureDetector = ScaleGestureDetector(context,this)
+
+
 //    fun setIsPointerView(isPointerView : Boolean){
 //        this.isPointerView = isPointerView
 //    }
@@ -86,29 +91,20 @@ class SonarGlView : GLSurfaceView,Runnable,ScaleGestureDetector.OnScaleGestureLi
         }
     }
 
-    fun setZoom(zoom : Float){
-        if(SonarSpec.zoom != zoom){
-//            clear()
-            SonarSpec.zoom = zoom
-            renderer.updateBgTexture()
-            requestRender()
-        }
-    }
-
     fun setRange(range : Float){
-        if(SonarSpec.range != range){
+//        if(SonarSpec.range != range){
             SonarSpec.range = range
-            renderer.updateBgTexture()
+            renderer.updateBgTexture(zoom)
             requestRender()
-        }
+//        }
     }
 
     fun setGain(gain : Int){
-        if(SonarSpec.gain != gain){
+//        if(SonarSpec.gain != gain){
             SonarSpec.gain = gain
-            renderer.updateBgTexture()
+            renderer.updateBgTexture(zoom)
             requestRender()
-        }
+//        }
     }
 
     private fun pause(){
@@ -184,33 +180,36 @@ class SonarGlView : GLSurfaceView,Runnable,ScaleGestureDetector.OnScaleGestureLi
             try {
                val d =  dataQueue.take()
                 //分离和处理数据，计算出xy
+                var degree = 0
+                degree = d.data.last().toInt()
                 if(isPointerView){
                     repeat(6){
-                        var degree = d.data.last().toInt() + 60*it
-                        if(degree>= 360 ) degree -= 360
-                        val x = d.data[it] * cos(degree * PI_M_2_P_360) / SonarSpec.zoom
-                        val y = d.data[it] * sin(degree * PI_M_2_P_360) / SonarSpec.zoom
+                        var cd = degree - it*60
+                        if(cd < 0)cd+=360
+                        val x = d.data[it] * cos(cd * PI_M_2_P_360) / zoom
+                        val y = d.data[it] * sin(cd * PI_M_2_P_360) / zoom
+
                         drawPointerList.add(x)
                         drawPointerList.add(y)
-                        if(drawPointerList.size>=600){
+                        if(drawPointerList.size>1200){
                             drawPointerList.removeFirst()
                             drawPointerList.removeFirst()
                         }
-                        renderData  = drawPointerList.toFloatArray()
-                        renderer.updateData(renderData,0f,0f,d.data.last())
                     }
+                    renderData  = drawPointerList.toFloatArray()
+                    renderer.updateData(renderData,0f,0f, degree.toFloat())
                 }else{
                     repeat(6){
-                        var degree = d.data.last().toInt() + 60*it
-                        if(degree>= 360 ) degree -= 360
+                        var cd = degree - it*60
+                        if(cd < 0)cd+=360
+                        val x = d.data[it] * cos(cd * PI_M_2_P_360) / zoom
+                        val y = d.data[it] * sin(cd * PI_M_2_P_360) / zoom
 
-                        val x = d.data[it] * cos(degree * PI_M_2_P_360) / SonarSpec.zoom
-                        val y = d.data[it] * sin(degree * PI_M_2_P_360) / SonarSpec.zoom
                         //如果没有存储这个角度的数据，就新建
-                        var sonarXY = drawDataArray.get(degree)
+                        var sonarXY = drawDataArray.get(cd)
                         if(sonarXY == null){
                             sonarXY = SonarXY(x,y)
-                            drawDataArray.put(degree,sonarXY)
+                            drawDataArray.put(cd,sonarXY)
                         }else{
                             //如果这个角度的数据已经存了，就更新
                             sonarXY.x = x
@@ -240,15 +239,15 @@ class SonarGlView : GLSurfaceView,Runnable,ScaleGestureDetector.OnScaleGestureLi
                     if(useOffsetXY){
                         val x = sumX / drawDataArray.size
                         val y = sumY / drawDataArray.size
-                        renderer.updateData(renderData,-x,-y,d.data.last())
+                        renderer.updateData(renderData,-x,-y,degree.toFloat())
                     }else{
-                        renderer.updateData(renderData,0f,0f,d.data.last())
+                        renderer.updateData(renderData,0f,0f,degree.toFloat())
                     }
                 }
                 d.recycle()
                 requestRender()
-                repeat(5){
-                    Thread.sleep(8)
+                repeat(2){
+                    Thread.sleep(20)
                     renderer.smoothAngle()
                     requestRender()
                 }
@@ -275,28 +274,31 @@ class SonarGlView : GLSurfaceView,Runnable,ScaleGestureDetector.OnScaleGestureLi
 
     override fun onScale(detector: ScaleGestureDetector): Boolean {
        val curScale = lastScale/detector.scaleFactor
-        if(curScale >= SonarSpec.MAX_ZOOM){
-            SonarSpec.zoom = SonarSpec.MAX_ZOOM
+        if(curScale >= MAX_ZOOM){
+            zoom = MAX_ZOOM
         }else if(curScale<0.1f){
-            SonarSpec.zoom = 0.1f
+            zoom = 0.1f
         }else{
-            SonarSpec.zoom = curScale
+            zoom = curScale
         }
-        renderer.updateBgTexture()
+        renderer.updateBgTexture(zoom)
         requestRender()
         return false
     }
 
-    private var lastScale =  SonarSpec.zoom
+    private var lastScale =  zoom
     override fun onScaleBegin(detector: ScaleGestureDetector): Boolean {
-        lastScale =  SonarSpec.zoom
+        lastScale =  zoom
+        pause()
         return true
     }
 
     override fun onScaleEnd(detector: ScaleGestureDetector) {
-        SonarSpec.zoom = SonarSpec.zoom.toBigDecimal(MathContext(2)).toFloat()
-        renderer.updateBgTexture()
+        zoom = zoom.toBigDecimal(MathContext(2)).toFloat()
+        renderer.updateBgTexture(zoom)
         requestRender()
+        resume()
+        clear()
     }
 
 //    如果是逆时针旋转：

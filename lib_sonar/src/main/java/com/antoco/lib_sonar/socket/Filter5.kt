@@ -21,7 +21,7 @@ import kotlin.math.sqrt
  * @Describe:
  **********************************/
 @SuppressLint("UseSparseArrays")
-internal class Filter {
+internal class Filter5 {
 
     private val originList = mutableListOf<FloatArray>()
     private var tempArray = FloatArray(120)
@@ -29,8 +29,6 @@ internal class Filter {
     private var revealArray : FloatArray ?=null
     private var oRevealArray : FloatArray = FloatArray(120)
     private var count = 0
-
-    private var countYuan = 0
 
     private var coefList = mutableListOf<Float>()
 
@@ -45,7 +43,7 @@ internal class Filter {
 
     interface FilterListener {
         fun onFilterData(filterData:Float,originData:Float)
-        fun onFilterArray(filterData:FloatArray,originData:FloatArray)
+        fun onFilterArray(filterData:FloatArray)
     }
 
 //    fun filter(degree: Int, data: FloatArray, filterListener : FilterListener){
@@ -95,11 +93,6 @@ internal class Filter {
                 }
                 tempRevealArray!![currentDegree / 3] = frData
                 oRevealArray[currentDegree / 3] = o
-                countYuan++
-                if(countYuan==120){
-                    countYuan = 0
-                    filterListener.onFilterArray(tempRevealArray!!.clone(),oRevealArray.clone())
-                }
             }else {
                 frData =  filterRevealZeroData(currentDegree, data)
                 fangTempArray[currentDegree / 3] = frData
@@ -157,8 +150,19 @@ internal class Filter {
 //
                     var fInd = 0
                     var sInd = 0
+//                    var minL = 1000
                     for(i in jiList.indices){
                         Log.e("test","找到极值   ${jiList[i]}")
+//                        var c = jiList.size-1
+//                        while (c!=i){
+//                            val m = abs(30 - abs(jiList[c]-jiList[i]))
+//                            if(m< minL){
+//                                minL = m
+//                                fInd = jiList[i]
+//                                sInd = jiList[c]
+//                            }
+//                            c--
+//                        }
                     }
                     if(jiList.size > 0){
                         fInd = jiList[0]
@@ -169,7 +173,11 @@ internal class Filter {
                             fInd = sInd-30
                         }
                         Log.e("test","找到最接近30的索引   $fInd  $sInd")
-
+//                    val a = 30-sInd+fInd
+//                    if(a != 30){
+//                        //寻找间隔30的两个值
+//
+//                    }
                         rectRes = FloatArray(120)
                         val array = FloatArray(sInd-fInd+1)
                         avgArray9.copyInto(array,0,fInd,sInd+1)
@@ -193,17 +201,7 @@ internal class Filter {
                         res3.copyInto(rectRes!!,sInd+60,0,60-sInd)
                         res3.copyInto(rectRes!!,0,60-sInd,res3.lastIndex+1)
 
-                        val fangOriginData = lastFilterData!!.clone()
-                        fangOriginData.forEachIndexed { index, fl ->
-                            if(fl > rectRes!![index]*0.97f&&fl < rectRes!![index]*1.3f){
-                                o = rectRes!![index]
-                                fangOriginData[index] = o
-                            }else if(fl > rectRes!![index]*1.5f){
-                                o = rectRes!![index]
-                                fangOriginData[index] = o
-                            }
-                        }
-                        filterListener.onFilterArray(rectRes!!,fangOriginData)
+                        filterListener.onFilterArray(rectRes!!)
                     }
                 }
             }
@@ -267,7 +265,7 @@ internal class Filter {
             }
 
         }
-        filterListener.onFilterData(frData,o,)
+         filterListener.onFilterData(frData,o,)
 //            return if(skip == 0){//这一步的操作主要是因为第一次会出现0值
 //                true
 //            } else {
@@ -684,7 +682,7 @@ internal class Filter {
     }
 
     //取不是0的平均值
-
+    
     private fun getAve(array : FloatArray):Float{
         var sum = 0f
         var count = 0f
